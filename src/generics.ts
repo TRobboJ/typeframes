@@ -1,5 +1,5 @@
-export type Row = Record<string, unknown>;
-export type Slice = { start?: number; end?: number; step?: number };
+import { Row } from "./idataframe";
+
 export type Prettify<T> = {
   [K in keyof T]: T[K];
 } & {};

@@ -88,14 +88,40 @@ describe("DataFrame", () => {
     });
   });
 
-  describe("push()", () => {
+  describe("pushRow()", () => {
     it("adds a new row", () => {
-      df.push({ name: "Charlie", age: 40, active: true });
+      df.pushRow({ name: "Charlie", age: 40, active: true });
       expect(df.shape).toEqual([3, 3]);
       expect(df.toArray()[2]).toEqual({
         name: "Charlie",
         age: 40,
         active: true,
+      });
+    });
+  });
+
+  describe("addColumn()", () => {
+    it("adds a new column with a initialised variable", () => {
+      const newDf = df.addColumn("number", 1);
+      expect(newDf.shape).toEqual([2, 4]);
+      expect(newDf.toArray()[1]).toEqual({
+        name: "Bob",
+        age: 25,
+        active: false,
+        number: 1,
+      });
+    });
+
+    it("adds a new column with a callback function", () => {
+      const newDf = df.addColumn("isBob", (row) =>
+        row.name === "Bob" ? true : false,
+      );
+      expect(newDf.shape).toEqual([2, 4]);
+      expect(newDf.toArray()[1]).toEqual({
+        name: "Bob",
+        age: 25,
+        active: false,
+        isBob: true,
       });
     });
   });
@@ -113,7 +139,6 @@ describe("DataFrame", () => {
 
   describe("head()", () => {
     it("returns first n rows", () => {
-      df.push({ name: "Charlie", age: 40, active: false });
       const head = df.head(2);
       expect(head).toEqual([
         { name: "Alice", age: 30, active: true },
@@ -122,11 +147,53 @@ describe("DataFrame", () => {
     });
   });
 
-  describe("shape", () => {
-    it("returns [rows, columns]", () => {
-      expect(df.shape).toEqual([2, 3]);
-      const empty = new DataFrame([]);
-      expect(empty.shape).toEqual([0, 0]);
+  describe("join", () => {
+    describe("left", () => {
+      it("joins correctly", () => {
+        const df1 = new DataFrame([
+          { id: 1, name: "Alice" },
+          { id: 2, name: "Bob" },
+        ]);
+
+        const df2 = new DataFrame([
+          { userId: 1, age: 25 },
+          { userId: 3, age: 30 },
+        ]);
+
+        const joined = df1.join(df2, "left", {
+          thisKey: "id",
+          otherKey: "userId",
+        });
+
+        expect(joined?.toArray()).toStrictEqual([
+          { id: 1, name: "Alice", age: 25 },
+          { id: 2, name: "Bob", age: null },
+        ]);
+      });
+    });
+
+    describe("right", () => {
+      it("joins correctly", () => {
+        const df1 = new DataFrame([
+          { id: 1, name: "Alice" },
+          { id: 2, name: "Bob" },
+        ]);
+
+        const df2 = new DataFrame([
+          { userId: 1, age: 25 },
+          { userId: 3, age: 30 },
+        ]);
+
+        const joined = df1.join(df2, "right", {
+          thisKey: "id",
+          otherKey: "userId",
+        });
+
+        expect(joined?.toArray()).toStrictEqual([
+          { name: "Alice", age: 25, userId: 1 },
+          { name: null, age: 30, userId: 3 },
+        ]);
+      });
     });
   });
 
@@ -183,6 +250,29 @@ describe("DataFrame", () => {
       expect(() => df.iloc({ start: -1, end: 2 })).toThrow(RangeError);
       expect(() => df.iloc({ start: 1, end: 5 })).toThrow(RangeError);
       expect(() => df.iloc({ start: 0, end: 3, step: 0 })).toThrow(RangeError);
+    });
+  });
+
+  describe("shape", () => {
+    it("returns [rows, columns]", () => {
+      expect(df.shape).toEqual([2, 3]);
+      const empty = new DataFrame([]);
+      expect(empty.shape).toEqual([0, 0]);
+    });
+  });
+
+  describe("columns", () => {
+    it("returns all column keys", () => {
+      expect(df.columns).toEqual(["name", "age", "active"]);
+      const empty = new DataFrame([]);
+      expect(empty.columns).toEqual([]);
+
+      const cols = df.columns;
+      cols.forEach((col) => {
+        if (col === "age") expect(df.col(col).max()).toBe(30);
+        if (col === "name") expect(df.col(col).max()).toBeUndefined();
+        if (col === "active") expect(df.col(col).name).toBe("active");
+      });
     });
   });
 });

@@ -1,14 +1,14 @@
-import { omit, pick, Prettify, Row, Slice } from "./generics";
+import { omit, pick, type Prettify } from "./generics";
+import type { Row, IDataFrame, Slice, FunctionMap } from "./idataframe";
 import { Series } from "./series";
 
-export class DataFrame<R extends Row> {
+export class DataFrame<R extends Row> implements IDataFrame<R> {
   readonly rows: R[];
 
   constructor(rows: R[] = []) {
     this.rows = rows.slice();
   }
 
-  /** Get typed Series for a column */
   col<K extends keyof R>(key: K): Series<R[K], K> {
     return new Series(
       this.rows.map((row) => row[key]),
@@ -16,13 +16,11 @@ export class DataFrame<R extends Row> {
     );
   }
 
-  /** Select subset of columns -> new DataFrame with narrowed row type */
   select<K extends keyof R>(...keys: K[]): DataFrame<Prettify<Pick<R, K>>> {
     const rows = this.rows.map((row) => pick(row, keys));
     return new DataFrame(rows);
   }
 
-  /** Drop columns -> new DataFrame without those keys */
   drop<K extends (keyof R)[]>(
     ...keys: K
   ): DataFrame<Prettify<Omit<R, K[number]>>> {
@@ -30,9 +28,8 @@ export class DataFrame<R extends Row> {
     return new DataFrame(rows);
   }
 
-  /** Assign new columns computed from existing row -> new type merges them in */
   assign<T extends Row>(map: {
-    [K in keyof T]: (row: R) => T[K];
+    [K in keyof T]: FunctionMap<R, T[K]>;
   }): DataFrame<Prettify<R & T>> {
     const newKeys = Object.keys(map) as (keyof T)[];
     const rows = this.rows.map((r) => {
@@ -81,18 +78,108 @@ export class DataFrame<R extends Row> {
     return new DataFrame(selectedRows);
   }
 
-  /** Map rows -> produce a DataFrame of completely new row type S */
-  mapRows<S extends Row>(fn: (row: R, i: number) => S): DataFrame<S> {
+  mapRows<S extends Row>(fn: FunctionMap<R, S>): DataFrame<S> {
     return new DataFrame(this.rows.map(fn));
   }
 
-  /** Filter rows -> keeps same row type R */
-  filterRows(fn: (row: R, i: number) => boolean): DataFrame<R> {
+  filterRows(fn: FunctionMap<R, boolean>): DataFrame<R> {
     return new DataFrame(this.rows.filter(fn));
   }
 
-  push(row: R) {
+  pushRow(row: R) {
     this.rows.push(row);
+  }
+
+  addColumn<K extends PropertyKey, T>(
+    key: K,
+    fill?: T | FunctionMap<R, T>,
+  ): DataFrame<
+    Prettify<
+      R & {
+        [P in K]: T;
+      }
+    >
+  > {
+    return new DataFrame(
+      this.rows.map((row, i) => ({
+        ...row,
+        [key]:
+          typeof fill === "function"
+            ? (fill as FunctionMap<R, T>)(row, i)
+            : fill,
+      })),
+    ) as DataFrame<
+      Prettify<
+        R & {
+          [P in K]: T;
+        }
+      >
+    >;
+  }
+
+  join<
+    OtherRow extends Row,
+    Key extends keyof R,
+    OtherKey extends keyof OtherRow,
+    JoinType extends "left" | "right",
+  >(
+    otherDf: DataFrame<OtherRow>,
+    type: JoinType,
+    on: {
+      thisKey: Key;
+      otherKey: OtherKey;
+    },
+  ) {
+    // This is also gross will update it later
+    type ResultRow = JoinType extends "left"
+      ? Prettify<
+          R & { [P in Exclude<keyof OtherRow, OtherKey>]: OtherRow[P] | null }
+        >
+      : JoinType extends "right"
+        ? Prettify<
+            OtherRow & {
+              [P in Exclude<keyof R, Key>]: R[P] | null;
+            }
+          >
+        : never;
+
+    // Switch sides for right or left join
+    // I know it's gross I will change it later
+    const left = type === "left" ? on.thisKey : on.otherKey;
+    const right = type === "left" ? on.otherKey : on.thisKey;
+    const leftDf = type === "left" ? this : otherDf;
+    const rightDf = type === "left" ? otherDf : this;
+
+    const map = new Map<OtherRow[OtherKey], OtherRow[]>();
+    for (const row of rightDf.rows) {
+      const keyValue = row[right];
+      if (!map.has(keyValue)) {
+        map.set(keyValue, []);
+      }
+      map.get(keyValue)!.push(row);
+    }
+
+    const joinedRows: ResultRow[] = leftDf.rows.map((leftRow) => {
+      const matches = map.get(leftRow[left]) ?? [];
+      if (matches.length === 0) {
+        const nulls = Object.fromEntries(
+          Object.keys(rightDf.rows[0] ?? {})
+            .filter((k) => k !== right)
+            .map((k) => [k, null]),
+        ) as { [P in Exclude<keyof OtherRow, OtherKey>]: null };
+
+        return { ...leftRow, ...nulls };
+      }
+
+      // NOTE: This doesn't handle multiple matches and only returns the first
+      const rightWithoutKey = Object.fromEntries(
+        Object.entries(matches[0]).filter(([k]) => k !== right),
+      ) as { [P in Exclude<keyof OtherRow, OtherKey>]: OtherRow[P] };
+
+      return { ...leftRow, ...rightWithoutKey };
+    });
+
+    return new DataFrame(joinedRows);
   }
 
   toArray(): R[] {
@@ -106,5 +193,10 @@ export class DataFrame<R extends Row> {
   get shape(): [number, number] {
     const cols = this.rows.length ? Object.keys(this.rows[0]).length : 0;
     return [this.rows.length, cols];
+  }
+
+  get columns(): (keyof R)[] {
+    if (!this.shape[1]) return [];
+    return Object.keys(this.rows[0]);
   }
 }

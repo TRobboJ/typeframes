@@ -6,7 +6,7 @@ export class DataFrame<R extends Row> implements IDataFrame<R> {
   readonly rows: R[];
 
   constructor(rows: R[] = []) {
-    this.rows = rows.slice();
+    this.rows = [...rows];
   }
 
   col<K extends keyof R>(key: K): Series<R[K], K> {
@@ -17,15 +17,15 @@ export class DataFrame<R extends Row> implements IDataFrame<R> {
   }
 
   select<K extends keyof R>(...keys: K[]): DataFrame<Prettify<Pick<R, K>>> {
-    const rows = this.rows.map((row) => pick(row, keys));
-    return new DataFrame(rows);
+    return new DataFrame(this.rows.map((row) => pick(row, keys)));
   }
 
-  drop<K extends (keyof R)[]>(
-    ...keys: K
-  ): DataFrame<Prettify<Omit<R, K[number]>>> {
-    const rows = this.rows.map((row) => omit(row, keys));
-    return new DataFrame(rows);
+  drop<K extends keyof R>(...keys: K[]): DataFrame<Prettify<Omit<R, K>>> {
+    const currentKeys = this.columns;
+    const omitMap = new Set(keys);
+    return new DataFrame(
+      this.rows.map((row) => omit(row, currentKeys, omitMap)),
+    );
   }
 
   assign<T extends Row>(map: {
@@ -43,17 +43,16 @@ export class DataFrame<R extends Row> implements IDataFrame<R> {
   }
 
   iloc(indices: number | number[] | Slice): DataFrame<R> {
+    if (this.isEmpty) throw new Error(`DataFrame is empty`);
     let selectedRows: R[] = [];
 
     if (typeof indices === "number") {
-      // Single row index
       const i = indices;
       if (i < 0 || i >= this.rows.length) {
         throw new RangeError(`Index ${i} out of bounds`);
       }
       selectedRows = [this.rows[i]];
     } else if (Array.isArray(indices)) {
-      // Array of indices
       selectedRows = indices.map((i) => {
         if (i < 0 || i >= this.rows.length) {
           throw new RangeError(`Index ${i} out of bounds`);
@@ -61,7 +60,6 @@ export class DataFrame<R extends Row> implements IDataFrame<R> {
         return this.rows[i];
       });
     } else {
-      // Slice object
       const start = indices.start ?? 0;
       const end = indices.end ?? this.rows.length;
       const step = indices.step ?? 1;
@@ -117,77 +115,120 @@ export class DataFrame<R extends Row> implements IDataFrame<R> {
     >;
   }
 
-  join<
+  leftJoin<
     OtherRow extends Row,
     Key extends keyof R,
     OtherKey extends keyof OtherRow,
-    JoinType extends "left" | "right",
   >(
     otherDf: DataFrame<OtherRow>,
-    type: JoinType,
     on: {
       thisKey: Key;
       otherKey: OtherKey;
     },
-  ) {
-    // This is also gross will update it later
-    type ResultRow = JoinType extends "left"
-      ? Prettify<
-          R & { [P in Exclude<keyof OtherRow, OtherKey>]: OtherRow[P] | null }
-        >
-      : JoinType extends "right"
-        ? Prettify<
-            OtherRow & {
-              [P in Exclude<keyof R, Key>]: R[P] | null;
-            }
-          >
-        : never;
-
-    // Switch sides for right or left join
-    // I know it's gross I will change it later
-    const left = type === "left" ? on.thisKey : on.otherKey;
-    const right = type === "left" ? on.otherKey : on.thisKey;
-    const leftDf = type === "left" ? this : otherDf;
-    const rightDf = type === "left" ? otherDf : this;
-
+  ): DataFrame<
+    Prettify<
+      R & { [P in Exclude<keyof OtherRow, OtherKey>]: OtherRow[P] | null }
+    >
+  > {
     const map = new Map<OtherRow[OtherKey], OtherRow[]>();
-    for (const row of rightDf.rows) {
-      const keyValue = row[right];
+
+    for (const row of otherDf.rows) {
+      const keyValue = row[on.otherKey];
       if (!map.has(keyValue)) {
         map.set(keyValue, []);
       }
-      map.get(keyValue)!.push(row);
+      map.get(keyValue)?.push(row);
     }
 
-    const joinedRows: ResultRow[] = leftDf.rows.map((leftRow) => {
-      const matches = map.get(leftRow[left]) ?? [];
-      if (matches.length === 0) {
+    // @ts-expect-error it's getting a bit whack in here
+    const joinedRows: Prettify<
+      R & { [P in Exclude<keyof OtherRow, OtherKey>]: OtherRow[P] | null }
+    >[] = this.rows.map((leftRow) => {
+      // @ts-expect-error We need to check the map with our other set of keys so of course the types don't match
+      const matches = map.get(leftRow[on.thisKey]);
+      if (!matches?.length) {
         const nulls = Object.fromEntries(
-          Object.keys(rightDf.rows[0] ?? {})
-            .filter((k) => k !== right)
+          otherDf.columns
+            .filter((k) => k !== on.otherKey)
             .map((k) => [k, null]),
-        ) as { [P in Exclude<keyof OtherRow, OtherKey>]: null };
+        );
 
         return { ...leftRow, ...nulls };
       }
 
       // NOTE: This doesn't handle multiple matches and only returns the first
       const rightWithoutKey = Object.fromEntries(
-        Object.entries(matches[0]).filter(([k]) => k !== right),
-      ) as { [P in Exclude<keyof OtherRow, OtherKey>]: OtherRow[P] };
+        Object.entries(matches[0]).filter(([k]) => k !== on.otherKey),
+      );
 
       return { ...leftRow, ...rightWithoutKey };
     });
+    return new DataFrame(joinedRows);
+  }
 
+  rightJoin<
+    OtherRow extends Row,
+    Key extends keyof R,
+    OtherKey extends keyof OtherRow,
+  >(
+    otherDf: DataFrame<OtherRow>,
+    on: {
+      thisKey: Key;
+      otherKey: OtherKey;
+    },
+  ): DataFrame<
+    Prettify<
+      OtherRow & {
+        [P in Exclude<keyof R, Key>]: R[P] | null;
+      }
+    >
+  > {
+    const map = new Map<R[keyof R], R[]>();
+
+    for (const row of this.rows) {
+      const keyValue = row[on.thisKey];
+      if (!map.has(keyValue)) {
+        map.set(keyValue, []);
+      }
+      map.get(keyValue)?.push(row);
+    }
+
+    // @ts-expect-error it's getting a bit whack in here
+    const joinedRows: Prettify<
+      OtherRow & {
+        [P in Exclude<keyof R, Key>]: R[P] | null;
+      }
+    >[] = otherDf.rows.map((rightRow) => {
+      // @ts-expect-error We need to check the map with our other set of keys so of course the types don't match
+      const matches = map.get(rightRow[on.otherKey]);
+      if (!matches?.length) {
+        const nulls = Object.fromEntries(
+          this.columns.filter((k) => k !== on.thisKey).map((k) => [k, null]),
+        );
+
+        return { ...rightRow, ...nulls };
+      }
+
+      // NOTE: This doesn't handle multiple matches and only returns the first
+      const rightWithoutKey = Object.fromEntries(
+        Object.entries(matches[0]).filter(([k]) => k !== on.thisKey),
+      );
+
+      return { ...rightRow, ...rightWithoutKey };
+    });
     return new DataFrame(joinedRows);
   }
 
   toArray(): R[] {
-    return this.rows.slice();
+    return [...this.rows];
   }
 
   head(n = 5): R[] {
     return this.rows.slice(0, n);
+  }
+
+  get isEmpty(): boolean {
+    return !this.shape[0];
   }
 
   get shape(): [number, number] {

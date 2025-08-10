@@ -160,7 +160,7 @@ describe("DataFrame", () => {
           { userId: 3, age: 30 },
         ]);
 
-        const joined = df1.join(df2, "left", {
+        const joined = df1.leftJoin(df2, {
           thisKey: "id",
           otherKey: "userId",
         });
@@ -184,7 +184,7 @@ describe("DataFrame", () => {
           { userId: 3, age: 30 },
         ]);
 
-        const joined = df1.join(df2, "right", {
+        const joined = df1.rightJoin(df2, {
           thisKey: "id",
           otherKey: "userId",
         });

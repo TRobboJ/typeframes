@@ -59,9 +59,7 @@ export interface IDataFrame<R extends Row> {
    * @template K - The keys of the columns to remove.
    * @param keys - Column names to remove.
    */
-  drop<K extends (keyof R)[]>(
-    ...keys: K
-  ): DataFrame<Prettify<Omit<R, K[number]>>>;
+  drop<K extends keyof R>(...keys: K[]): DataFrame<Prettify<Omit<R, K>>>;
 
   /**
    * Returns a new {@link DataFrame} with additional or replaced columns,

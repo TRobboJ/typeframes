@@ -24,20 +24,28 @@ export const getObjectFromEntries = <
   return Object.fromEntries(entries) as FromEntries<T>;
 };
 
-export const omit = <T extends Row, K extends (keyof T)[]>(
+export const omit = <T extends Row, K extends keyof T, O extends K>(
   obj: T,
-  keys: K,
-): Omit<T, K[number]> => {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([key]) => !keys.includes(key as K[number])),
-  ) as Omit<T, K[number]>;
+  currentKeys: K[],
+  omitMap: Set<O>,
+): Omit<T, O> => {
+  const newObj = {} as Omit<T, O>;
+  for (const key of currentKeys) {
+    // @ts-expect-error We are purposely checking against this for values we can omit
+    if (omitMap.has(key)) continue;
+    // @ts-expect-error If we get this far we know we can assign the value
+    newObj[key] = obj[key];
+  }
+  return newObj;
 };
 
 export const pick = <T extends Row, K extends keyof T>(
   obj: T,
   keys: readonly K[],
 ): Pick<T, K> => {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([key]) => keys.includes(key as K)),
-  ) as Pick<T, K>;
+  const newObj = {} as Pick<T, K>;
+  for (const key of keys) {
+    newObj[key] = obj[key];
+  }
+  return newObj;
 };

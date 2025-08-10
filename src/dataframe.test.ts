@@ -79,6 +79,31 @@ describe("DataFrame", () => {
     });
   });
 
+  describe("mapColumns()", () => {
+    it("maps columns by applying Series transformations", () => {
+      const newDf = df.mapColumns({
+        name: (name) => name,
+        age: (age) => age.lambda((age) => age.toString()),
+        active: (active) => active.lambda((active) => !active),
+      });
+
+      expect(newDf.toArray()).toEqual([
+        { name: "Alice", age: "30", active: false },
+        { name: "Bob", age: "25", active: true },
+      ]);
+    });
+
+    it("returns a DataFrame with correct shape", () => {
+      const newDf = df.mapColumns({
+        name: (name) => name,
+        age: (age) => age,
+        active: (active) => active,
+      });
+
+      expect(newDf.shape).toEqual([2, 3]);
+    });
+  });
+
   describe("filterRows()", () => {
     it("returns only rows that pass the predicate", () => {
       const filtered = df.filterRows((row) => row.active);

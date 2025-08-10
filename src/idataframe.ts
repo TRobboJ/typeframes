@@ -4,7 +4,11 @@ import type { Series } from "./series";
 
 export type Row = Record<string, unknown>;
 export type Slice = { start?: number; end?: number; step?: number };
-export type FunctionMap<R extends Row, T> = (row: R, i: number) => T;
+export type RowMap<R extends Row, T> = (row: R, i: number) => T;
+export type ColumnMap<R extends Row, S extends Row> = {
+  // @ts-expect-error I know it can't be assigned there
+  [K in keyof S]: (series: Series<R[K], K>) => Series<S[K], K>;
+};
 
 /**
  * Represents a two-dimensional, tabular data structure similar to a spreadsheet or SQL table.
@@ -102,7 +106,7 @@ export interface IDataFrame<R extends Row> {
 
   addColumn<K extends PropertyKey, T>(
     key: K,
-    fill?: T | FunctionMap<R, T>,
+    fill?: T | RowMap<R, T>,
   ): DataFrame<
     Prettify<
       R & {

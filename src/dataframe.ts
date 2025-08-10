@@ -1,5 +1,5 @@
 import { omit, pick, type Prettify } from "./generics";
-import type { Row, IDataFrame, Slice, FunctionMap } from "./idataframe";
+import type { Row, IDataFrame, Slice, RowMap, ColumnMap } from "./idataframe";
 import { Series } from "./series";
 
 export class DataFrame<R extends Row> implements IDataFrame<R> {
@@ -29,7 +29,7 @@ export class DataFrame<R extends Row> implements IDataFrame<R> {
   }
 
   assign<T extends Row>(map: {
-    [K in keyof T]: FunctionMap<R, T[K]>;
+    [K in keyof T]: RowMap<R, T[K]>;
   }): DataFrame<Prettify<R & T>> {
     const newKeys = Object.keys(map) as (keyof T)[];
     const rows = this.rows.map((r) => {
@@ -76,11 +76,32 @@ export class DataFrame<R extends Row> implements IDataFrame<R> {
     return new DataFrame(selectedRows);
   }
 
-  mapRows<S extends Row>(fn: FunctionMap<R, S>): DataFrame<S> {
+  mapRows<S extends Row>(fn: RowMap<R, S>): DataFrame<S> {
     return new DataFrame(this.rows.map(fn));
   }
 
-  filterRows(fn: FunctionMap<R, boolean>): DataFrame<R> {
+  mapColumns<S extends Row>(fnMap: ColumnMap<R, S>): DataFrame<S> {
+    const seriesMap = {} as { [K in keyof S]: Series<S[K], K> };
+
+    for (const key in fnMap) {
+      seriesMap[key] = fnMap[key](this.col(key));
+    }
+
+    const length = this.rows.length;
+    const newRows: S[] = [];
+
+    for (let i = 0; i < length; i++) {
+      const row = {} as S;
+      for (const key in seriesMap) {
+        row[key] = seriesMap[key].toArray()[i];
+      }
+      newRows.push(row);
+    }
+
+    return new DataFrame(newRows);
+  }
+
+  filterRows(fn: RowMap<R, boolean>): DataFrame<R> {
     return new DataFrame(this.rows.filter(fn));
   }
 
@@ -90,7 +111,7 @@ export class DataFrame<R extends Row> implements IDataFrame<R> {
 
   addColumn<K extends PropertyKey, T>(
     key: K,
-    fill?: T | FunctionMap<R, T>,
+    fill?: T | RowMap<R, T>,
   ): DataFrame<
     Prettify<
       R & {
@@ -102,9 +123,7 @@ export class DataFrame<R extends Row> implements IDataFrame<R> {
       this.rows.map((row, i) => ({
         ...row,
         [key]:
-          typeof fill === "function"
-            ? (fill as FunctionMap<R, T>)(row, i)
-            : fill,
+          typeof fill === "function" ? (fill as RowMap<R, T>)(row, i) : fill,
       })),
     ) as DataFrame<
       Prettify<

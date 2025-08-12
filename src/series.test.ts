@@ -196,6 +196,22 @@ describe("Series", () => {
     const series3 = new Series(["", 1, 2], "mixed");
     const mean3 = series3.mean();
     expect(mean3).toBe(1.5);
+    const series4 = new Series(
+      [
+        Number.POSITIVE_INFINITY,
+        1,
+        4,
+        100,
+        Number.NaN,
+        undefined,
+        null,
+        "",
+        "100",
+      ],
+      "mixed",
+    );
+    const mean4 = series4.mean();
+    expect(mean4).toBe(35);
   });
 
   it("median", () => {
@@ -211,5 +227,22 @@ describe("Series", () => {
     const series4 = new Series(["", 1, 2, 3, 4], "mixed");
     const median4 = series4.median();
     expect(median4).toBe(2.5);
+    const series5 = new Series(
+      [
+        Number.POSITIVE_INFINITY,
+        1,
+        4,
+        5,
+        100,
+        Number.NaN,
+        undefined,
+        null,
+        "",
+        "100",
+      ],
+      "mixed",
+    );
+    const mean5 = series5.median();
+    expect(mean5).toBe(4.5);
   });
 });

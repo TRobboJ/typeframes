@@ -246,6 +246,11 @@ export class DataFrame<R extends Row> implements IDataFrame<R> {
     return this.rows.slice(0, n);
   }
 
+  tail(n = 5): R[] {
+    if (n > this.shape[0]) return [...this.rows];
+    return this.rows.slice(this.shape[0] - n);
+  }
+
   get isEmpty(): boolean {
     return !this.shape[0];
   }

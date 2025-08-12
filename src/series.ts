@@ -86,22 +86,28 @@ export class Series<SeriesType, SeriesName extends PropertyKey> {
 
   public mean = () => {
     if (!this.size) return undefined;
-    const sorted = this.items
-      .map((it) => (Number.isFinite(it) ? it : null))
-      .filter((it) => typeof it === "number")
-      .toSorted();
-    const sum = this.sum();
-    if (!sum) return 0;
-    return sum / sorted.length;
+    let validCount = 0;
+    let total = 0;
+    for (let i = 0; i < this.size; i++) {
+      const currValue = this.items[i];
+      if (this.isValidNumber(currValue)) {
+        total += currValue;
+        validCount++;
+      }
+    }
+    if (!total || !validCount) return 0;
+    return total / validCount;
   };
 
   public median = () => {
     if (!this.size) return undefined;
-    const sorted = this.items
-      .map((it) => (Number.isFinite(it) ? it : null))
-      .filter((it) => typeof it === "number")
-      .toSorted();
-    if (!sorted.length) return undefined;
+    const numberValues: number[] = [];
+    for (let i = 0; i < this.size; i++) {
+      const currValue = this.items[i];
+      if (this.isValidNumber(currValue)) numberValues.push(currValue);
+    }
+    if (!numberValues.length) return undefined;
+    const sorted = numberValues.sort((a, b) => a - b);
     if (sorted.length === 1) return sorted[0];
     if (sorted.length === 2) return (sorted[0] + sorted[1]) / 2;
     const isOdd = sorted.length % 2 === 1;
@@ -181,5 +187,11 @@ export class Series<SeriesType, SeriesName extends PropertyKey> {
     if (!this.size) return undefined;
     if (n > this.size - 1) return this.items;
     return this.items.slice(this.size - n);
+  };
+
+  private isValidNumber = (val: unknown): val is number => {
+    return (
+      typeof val === "number" && !Number.isNaN(val) && Number.isFinite(val)
+    );
   };
 }

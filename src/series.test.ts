@@ -242,7 +242,39 @@ describe("Series", () => {
       ],
       "mixed",
     );
-    const mean5 = series5.median();
-    expect(mean5).toBe(4.5);
+    const median5 = series5.median();
+    expect(median5).toBe(4.5);
+  });
+
+  it("quantile", () => {
+    const series = new Series([1, 2, 3, 4, 5], "numbers");
+    const quantile = series.quantile(0.5);
+    expect(quantile).toBe(3);
+    const series2 = new Series([""], "mixed");
+    const quantile2 = series2.quantile(1);
+    expect(quantile2).toBeUndefined();
+    const series3 = new Series(["", 1, 2], "mixed");
+    const quantile3 = series3.quantile(1);
+    expect(quantile3).toBe(2);
+    const series4 = new Series(["", 1, 2, 3, 4], "mixed");
+    const quantile4 = series4.quantile(0);
+    expect(quantile4).toBe(1);
+    const series5 = new Series(
+      [
+        Number.POSITIVE_INFINITY,
+        1,
+        4,
+        5,
+        100,
+        Number.NaN,
+        undefined,
+        null,
+        "",
+        "100",
+      ],
+      "mixed",
+    );
+    const quantile5 = series5.quantile(0.75);
+    expect(quantile5).toBe(28.75);
   });
 });

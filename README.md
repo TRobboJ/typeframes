@@ -123,5 +123,23 @@ const joined = dfLeft.leftJoin(dfRight, {
  */
 
 console.log(joined.head(2));
+
+const assigned = df.assign({
+  birthYear: (row) => 2025 - row.age,
+  nameLength: (row) => row.name.length,
+});
+
+/**[
+ *   {
+ *      name: "Alice",
+ *      age: 30,
+ *      active: true,
+ *      birthYear: 1995,
+ *      nameLength: 5,
+ *    },
+ *    { name: "Bob", age: 25, active: false, birthYear: 2000, nameLength: 3 },
+ *  ]
+ */
+console.log(assigned.head(2));
 ```
 <!-- AUTO-GENERATED-CONTENT:END *-->

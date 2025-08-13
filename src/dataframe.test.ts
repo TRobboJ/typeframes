@@ -55,8 +55,8 @@ describe("DataFrame", () => {
   describe("assign()", () => {
     it("adds new columns based on functions of rows", () => {
       const assigned = df.assign({
-        birthYear: (r) => 2025 - r.age,
-        nameLength: (r) => r.name.length,
+        birthYear: (row) => 2025 - row.age,
+        nameLength: (row) => row.name.length,
       });
       expect(assigned.shape).toEqual([2, 5]);
       expect(assigned.toArray()).toEqual([
@@ -165,7 +165,19 @@ describe("DataFrame", () => {
   describe("head()", () => {
     it("returns first n rows", () => {
       const head = df.head(2);
+      expect(head.length).toBe(2);
       expect(head).toEqual([
+        { name: "Alice", age: 30, active: true },
+        { name: "Bob", age: 25, active: false },
+      ]);
+    });
+  });
+
+  describe("tail()", () => {
+    it("returns first n rows", () => {
+      const tail = df.head(2);
+      expect(tail.length).toBe(2);
+      expect(tail).toEqual([
         { name: "Alice", age: 30, active: true },
         { name: "Bob", age: 25, active: false },
       ]);

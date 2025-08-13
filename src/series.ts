@@ -15,6 +15,7 @@ export class Series<SeriesType, SeriesName extends PropertyKey> {
   get size(): number {
     return this.items.length;
   }
+
   public lambda<SeriesReturnType>(
     fn: SeriesLambda<SeriesType, SeriesReturnType>,
   ): Series<SeriesReturnType, SeriesName>;
@@ -56,8 +57,8 @@ export class Series<SeriesType, SeriesName extends PropertyKey> {
     if (!this.size) return 0;
     return this.items.reduce(
       (acc, cur) =>
-        (typeof acc === "number" ? acc : 0) +
-        (typeof cur === "number" ? cur : 0),
+        (this.isValidNumber(acc) ? acc : 0) +
+        (this.isValidNumber(cur) ? cur : 0),
       0,
     );
   };
@@ -66,7 +67,7 @@ export class Series<SeriesType, SeriesName extends PropertyKey> {
     if (!this.size) return undefined;
     const res = Math.max(
       ...this.items.map((item) =>
-        typeof item === "number" ? item : Number.NEGATIVE_INFINITY,
+        this.isValidNumber(item) ? item : Number.NEGATIVE_INFINITY,
       ),
     );
     if (Number.isFinite(res)) return res;
@@ -77,7 +78,7 @@ export class Series<SeriesType, SeriesName extends PropertyKey> {
     if (!this.size) return undefined;
     const res = Math.min(
       ...this.items.map((item) =>
-        typeof item === "number" ? item : Number.POSITIVE_INFINITY,
+        this.isValidNumber(item) ? item : Number.POSITIVE_INFINITY,
       ),
     );
     if (Number.isFinite(res)) return res;
@@ -101,18 +102,52 @@ export class Series<SeriesType, SeriesName extends PropertyKey> {
 
   public median = () => {
     if (!this.size) return undefined;
-    const numberValues: number[] = [];
-    for (let i = 0; i < this.size; i++) {
-      const currValue = this.items[i];
-      if (this.isValidNumber(currValue)) numberValues.push(currValue);
-    }
-    if (!numberValues.length) return undefined;
-    const sorted = numberValues.sort((a, b) => a - b);
+    const sorted = this.getSortedNumbers();
+    if (!sorted.length) return undefined;
     if (sorted.length === 1) return sorted[0];
     if (sorted.length === 2) return (sorted[0] + sorted[1]) / 2;
     const isOdd = sorted.length % 2 === 1;
     const half = Math.floor(sorted.length / 2);
     return isOdd ? sorted[half] : (sorted[half - 1] + sorted[half]) / 2;
+  };
+
+  public quantile = (p: number) => {
+    if (!this.size) return undefined;
+    if (p < 0 || p > 1) throw new Error(`P must be between 0 and 1`);
+    const sorted = this.getSortedNumbers();
+    if (!sorted.length) return undefined;
+    const position = (sorted.length - 1) * p;
+    const base = Math.floor(position);
+    const rest = position - base;
+    if (base + 1 < sorted.length) {
+      return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+    } else {
+      return sorted[base];
+    }
+  };
+
+  public toUpper = () => {
+    if (!this.size) return this;
+    const newValues: (SeriesType | string)[] = [];
+    for (let i = 0; i < this.size; i++) {
+      const currValue = this.items[i];
+      if (this.isValidString(currValue))
+        newValues.push(currValue.toUpperCase());
+      else newValues.push(currValue);
+    }
+    return new Series(newValues, this.name);
+  };
+
+  public toLower = () => {
+    if (!this.size) return this;
+    const newValues: (SeriesType | string)[] = [];
+    for (let i = 0; i < this.size; i++) {
+      const currValue = this.items[i];
+      if (this.isValidString(currValue))
+        newValues.push(currValue.toLowerCase());
+      else newValues.push(currValue);
+    }
+    return new Series(newValues, this.name);
   };
 
   public fill = <FillValue, ReplacementValues extends readonly unknown[]>(
@@ -193,5 +228,19 @@ export class Series<SeriesType, SeriesName extends PropertyKey> {
     return (
       typeof val === "number" && !Number.isNaN(val) && Number.isFinite(val)
     );
+  };
+
+  private isValidString = (val: unknown): val is string => {
+    return typeof val === "string";
+  };
+
+  private getSortedNumbers = (order: "asc" | "desc" = "asc"): number[] => {
+    const numberValues: number[] = [];
+    for (let i = 0; i < this.size; i++) {
+      const currValue = this.items[i];
+      if (this.isValidNumber(currValue)) numberValues.push(currValue);
+    }
+    if (!numberValues.length) return numberValues;
+    return numberValues.sort((a, b) => (order === "asc" ? a - b : b - a));
   };
 }

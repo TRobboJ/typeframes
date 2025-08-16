@@ -1,6 +1,6 @@
 {
   "name": "typeframes",
-  "version": "0.0.4",
+  "version": "0.0.3",
   "description": "DataFrames, with types!",
   "main": "build/index.js",
   "keywords": [

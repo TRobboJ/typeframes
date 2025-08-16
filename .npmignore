@@ -1,17 +1,7 @@
-scripts
-**/*.test.ts
-.git/
-.gitignore
-.DS_Store
-eslint.config.mjs
-node_modules
-old
-    # Ignore everything
-    *
+*
 
-    # But include specific files/directories
-    !index.js
-    !lib/
-    !dist/
-    !README.md
-    !LICENSE
+!build/*
+!lib/
+!dist/
+!README.md
+!LICENSE

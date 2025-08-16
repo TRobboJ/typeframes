@@ -1,8 +1,8 @@
 {
   "name": "typeframes",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "DataFrames, with types!",
-  "main": "index.js",
+  "main": "build/index.js",
   "keywords": [
     "dataframe",
     "series",
@@ -14,6 +14,7 @@
     "analytics"
   ],
   "scripts": {
+    "build": "tsc",
     "test": "vitest",
     "lint": "eslint",
     "dev": "ts-node scripts/seriesExample.ts && ts-node scripts/dataframeExample.ts",

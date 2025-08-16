@@ -6,3 +6,12 @@ scripts
 eslint.config.mjs
 node_modules
 old
+    # Ignore everything
+    *
+
+    # But include specific files/directories
+    !index.js
+    !lib/
+    !dist/
+    !README.md
+    !LICENSE

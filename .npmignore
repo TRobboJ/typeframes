@@ -1,7 +1,6 @@
 *
 
 !build/*
-!lib/
-!dist/
+!build/src/*
 !README.md
 !LICENSE

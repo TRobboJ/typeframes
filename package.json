@@ -1,7 +1,7 @@
 {
-  "name": "hoku",
-  "version": "1.0.0",
-  "description": "Node.js based DataFrames",
+  "name": "typeframes",
+  "version": "0.0.1",
+  "description": "DataFrames, with types!",
   "main": "index.js",
   "scripts": {
     "test": "vitest",

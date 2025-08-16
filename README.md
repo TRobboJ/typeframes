@@ -3,12 +3,16 @@
 ## About
 
 Originally inspired by my frustration in the lack of types provided in pandas,
-this repo is just a pet project to learn how DataFrames and Series work under the hood.
+this repo is an implementation that has a focus on readability and easy maintenance.
+
+It's JavaScript, so if you're looking for amazing performance you should be looking else where,
+but if you just want to dip your feet into DataFrames then this is a good place to start.
 
 ## Series
 
 <!-- AUTO-GENERATED-CONTENT:START (CODE:src=./scripts/seriesExample.ts) -->
 <!-- The below code snippet is automatically added from ./scripts/seriesExample.ts -->
+
 ```ts
 import { Series } from "../src/series";
 
@@ -55,12 +59,14 @@ const falseyFilledSeries = new Series(
 /** [1, 0, 0, 0, 0, 10, 0] */
 console.log(falseyFilledSeries.items);
 ```
+
 <!-- AUTO-GENERATED-CONTENT:END *-->
 
 ### DataFrame
 
 <!-- AUTO-GENERATED-CONTENT:START (CODE:src=./scripts/dataframeExample.ts) -->
 <!-- The below code snippet is automatically added from ./scripts/dataframeExample.ts -->
+
 ```ts
 import { DataFrame } from "../src/dataframe";
 
@@ -142,4 +148,5 @@ const assigned = df.assign({
  */
 console.log(assigned.head(2));
 ```
+
 <!-- AUTO-GENERATED-CONTENT:END *-->

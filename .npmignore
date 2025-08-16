@@ -1,0 +1,6 @@
+scripts
+**/*.test.ts
+.git/
+.gitignore
+.DS_Store
+eslint.config.mjs

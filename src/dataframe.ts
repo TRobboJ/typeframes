@@ -9,6 +9,33 @@ export class DataFrame<R extends Row> implements IDataFrame<R> {
     this.rows = [...rows];
   }
 
+  get isEmpty(): boolean {
+    return !this.shape[0];
+  }
+
+  get shape(): [number, number] {
+    const cols = this.rows.length ? Object.keys(this.rows[0]).length : 0;
+    return [this.rows.length, cols];
+  }
+
+  get columns(): (keyof R)[] {
+    if (!this.shape[1]) return [];
+    return Object.keys(this.rows[0]);
+  }
+
+  head(n = 5): R[] {
+    return this.rows.slice(0, n);
+  }
+
+  tail(n = 5): R[] {
+    if (n > this.shape[0]) return [...this.rows];
+    return this.rows.slice(this.shape[0] - n);
+  }
+
+  toArray(): R[] {
+    return [...this.rows];
+  }
+
   col<K extends keyof R>(key: K): Series<R[K], K> {
     return new Series(
       this.rows.map((row) => row[key]),
@@ -236,32 +263,5 @@ export class DataFrame<R extends Row> implements IDataFrame<R> {
       return { ...rightRow, ...rightWithoutKey };
     });
     return new DataFrame(joinedRows);
-  }
-
-  toArray(): R[] {
-    return [...this.rows];
-  }
-
-  head(n = 5): R[] {
-    return this.rows.slice(0, n);
-  }
-
-  tail(n = 5): R[] {
-    if (n > this.shape[0]) return [...this.rows];
-    return this.rows.slice(this.shape[0] - n);
-  }
-
-  get isEmpty(): boolean {
-    return !this.shape[0];
-  }
-
-  get shape(): [number, number] {
-    const cols = this.rows.length ? Object.keys(this.rows[0]).length : 0;
-    return [this.rows.length, cols];
-  }
-
-  get columns(): (keyof R)[] {
-    if (!this.shape[1]) return [];
-    return Object.keys(this.rows[0]);
   }
 }

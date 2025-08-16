@@ -1,10 +1,9 @@
-type SeriesLambda<SeriesType, SeriesReturnType> = (
-  value: SeriesType,
-  i: number,
-) => SeriesReturnType;
+import { ISeries, SeriesLambda } from "./iseries";
 
-export class Series<SeriesType, SeriesName extends PropertyKey> {
-  public items: SeriesType[];
+export class Series<SeriesType, SeriesName extends PropertyKey>
+  implements ISeries<SeriesType, SeriesName>
+{
+  readonly items: SeriesType[];
   public name: SeriesName;
 
   constructor(items: SeriesType[], name: SeriesName) {
@@ -15,6 +14,17 @@ export class Series<SeriesType, SeriesName extends PropertyKey> {
   get size(): number {
     return this.items.length;
   }
+
+  public head = (n = 1) => {
+    if (!this.size) return undefined;
+    return this.items.slice(0, n);
+  };
+
+  public tail = (n = 1) => {
+    if (!this.size) return undefined;
+    if (n > this.size - 1) return this.items;
+    return this.items.slice(this.size - n);
+  };
 
   public lambda<SeriesReturnType>(
     fn: SeriesLambda<SeriesType, SeriesReturnType>,
@@ -53,6 +63,7 @@ export class Series<SeriesType, SeriesName extends PropertyKey> {
     return [...this.items];
   };
 
+  /** Math methods */
   public sum = () => {
     if (!this.size) return 0;
     return this.items.reduce(
@@ -96,7 +107,7 @@ export class Series<SeriesType, SeriesName extends PropertyKey> {
         validCount++;
       }
     }
-    if (!total || !validCount) return 0;
+    if (!total && !validCount) return 0;
     return total / validCount;
   };
 
@@ -126,6 +137,7 @@ export class Series<SeriesType, SeriesName extends PropertyKey> {
     }
   };
 
+  /** String methods */
   public toUpper = () => {
     if (!this.size) return this;
     const newValues: (SeriesType | string)[] = [];
@@ -150,6 +162,7 @@ export class Series<SeriesType, SeriesName extends PropertyKey> {
     return new Series(newValues, this.name);
   };
 
+  /** Fill methods */
   public fill = <FillValue, ReplacementValues extends readonly unknown[]>(
     fill: FillValue,
     ...find: ReplacementValues
@@ -213,17 +226,7 @@ export class Series<SeriesType, SeriesName extends PropertyKey> {
     return new Series(newItems, this.name);
   };
 
-  public head = (n = 1) => {
-    if (!this.size) return undefined;
-    return this.items.slice(0, n);
-  };
-
-  public tail = (n = 1) => {
-    if (!this.size) return undefined;
-    if (n > this.size - 1) return this.items;
-    return this.items.slice(this.size - n);
-  };
-
+  /** Validation methods */
   private isValidNumber = (val: unknown): val is number => {
     return (
       typeof val === "number" && !Number.isNaN(val) && Number.isFinite(val)

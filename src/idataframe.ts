@@ -16,8 +16,39 @@ export type ColumnMap<R extends Row, S extends Row> = {
  * @template R - The row type where each key is a column name and each value is the column's type.
  */
 export interface IDataFrame<R extends Row> {
-  /** The rows contained in the DataFrame. */
   readonly rows: R[];
+
+  /**
+   * Returns true if the DataFrame contains rows and false if it does not.
+   */
+  readonly isEmpty: boolean;
+
+  /**
+   * Returns the shape of the DataFrame as `[rows, columns]`.
+   */
+  readonly shape: [number, number];
+
+  /**
+   * Returns the DataFrame keys.
+   */
+  readonly columns: (keyof R)[];
+
+  /**
+   * Returns the first `n` rows of the DataFrame.
+   * @param n - Number of rows to return. Defaults to 5.
+   */
+  head(n?: number): R[];
+
+  /**
+   * Returns the last `n` rows of the DataFrame.
+   * @param n - Number of rows to return. Defaults to 5.
+   */
+  tail(n?: number): R[];
+
+  /**
+   * Returns a shallow copy of the DataFrame's rows as an array.
+   */
+  toArray(): R[];
 
   /**
    * Returns a {@link Series} containing all values from a single column of the DataFrame.
@@ -86,10 +117,20 @@ export interface IDataFrame<R extends Row> {
   /**
    * Maps each row to a new row, producing a new DataFrame.
    *
-   * @template S - The type of the new row.
    * @param fn - Function that maps a row and its index to a new row.
    */
   mapRows<S extends Row>(fn: (row: R, i: number) => S): DataFrame<S>;
+
+  /**
+   * Map over all columns in the DataFrame, producing a new DataFrame
+   * with a potentially different schema.
+   *
+   * @param fnMap - An object mapping column keys in `S` to functions
+   *                that receive the corresponding `Series` and return
+   *                a new `Series`.
+   * @returns A new DataFrame<S> with transformed columns
+   */
+  mapColumns<S extends Row>(fnMap: ColumnMap<R, S>): DataFrame<S>;
 
   /**
    * Filters rows based on a predicate function.
@@ -116,23 +157,54 @@ export interface IDataFrame<R extends Row> {
   >;
 
   /**
-   * Returns a shallow copy of the DataFrame's rows as an array.
+   * Perform a left join between this DataFrame and another DataFrame.
+   *
+   * Keeps all rows from this DataFrame, and matches rows from the other DataFrame
+   * where the join keys are equal. If no match is found, the other DataFrame's
+   * columns are filled with `null`.
+   *
+   * @param otherDf - The other DataFrame to join with
+   * @param on - Object specifying join keys: `{ thisKey, otherKey }`
+   * @returns A new DataFrame containing all rows from this DataFrame and matching columns from the other
    */
-  toArray(): R[];
+  leftJoin<
+    OtherRow extends Row,
+    Key extends keyof R,
+    OtherKey extends keyof OtherRow,
+  >(
+    otherDf: DataFrame<OtherRow>,
+    on: {
+      thisKey: Key;
+      otherKey: OtherKey;
+    },
+  ): DataFrame<
+    Prettify<
+      R & { [P in Exclude<keyof OtherRow, OtherKey>]: OtherRow[P] | null }
+    >
+  >;
 
   /**
-   * Returns the first `n` rows of the DataFrame.
-   * @param n - Number of rows to return. Defaults to 5.
+   * Perform a right join between this DataFrame and another DataFrame.
+   *
+   * Keeps all rows from the other DataFrame, and matches rows from this DataFrame
+   * where the join keys are equal. If no match is found, this DataFrame's
+   * columns are filled with `null`.
+   *
+   * @param otherDf - The other DataFrame to join with
+   * @param on - Object specifying join keys: `{ thisKey, otherKey }`
+   * @returns A new DataFrame containing all rows from the other DataFrame and matching columns from this one
    */
-  head(n?: number): R[];
-
-  /**
-   * Returns the shape of the DataFrame as `[rows, columns]`.
-   */
-  readonly shape: [number, number];
-
-  /**
-   * Returns the DataFrame keys.
-   */
-  readonly columns: (keyof R)[];
+  rightJoin<
+    OtherRow extends Row,
+    Key extends keyof R,
+    OtherKey extends keyof OtherRow,
+  >(
+    otherDf: DataFrame<OtherRow>,
+    on: {
+      thisKey: Key;
+      otherKey: OtherKey;
+    },
+  ): DataFrame<
+    Prettify<OtherRow & { [P in Exclude<keyof R, Key>]: R[P] | null }>
+  >;
 }

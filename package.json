@@ -3,6 +3,16 @@
   "version": "0.0.1",
   "description": "DataFrames, with types!",
   "main": "index.js",
+  "keywords": [
+    "dataframe",
+    "series",
+    "typescript",
+    "javascript",
+    "pandas",
+    "data",
+    "etl",
+    "analytics"
+  ],
   "scripts": {
     "test": "vitest",
     "lint": "eslint",

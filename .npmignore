@@ -4,3 +4,5 @@ scripts
 .gitignore
 .DS_Store
 eslint.config.mjs
+node_modules
+old

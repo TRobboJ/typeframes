@@ -2,6 +2,10 @@
   "name": "typeframes",
   "version": "0.0.5",
   "description": "DataFrames, with types!",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TRobboJ/typeframes.git"
+  },
   "main": "build/index.js",
   "keywords": [
     "dataframe",
